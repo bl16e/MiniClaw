@@ -1,0 +1,32 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.claude/
+
+# Local agent memory / generated docs
+SOUL.md
+USER.md
+EXPERIENCE.md
+
+# Local auth secrets
+credentials.json
+token.json
+tools/credentials.json
+tools/token.json
+
+# Vector database runtime state
+chroma_db/**/chroma.sqlite3
+chroma_db/**/*.bin
+chroma_db/**/*.pickle
+chroma_db/**/index_metadata.pickle
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
