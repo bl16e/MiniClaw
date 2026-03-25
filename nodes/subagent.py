@@ -1,7 +1,7 @@
 import uuid
 
 from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.constants import Send
+from langgraph.types import Send
 
 from config import llm
 
@@ -24,7 +24,7 @@ async def subagent_executor_node(state, app):
 
     while True:
         result = await app.ainvoke(subagent_state, config=config)
-        snapshot = app.get_state(config)
+        snapshot = await app.aget_state(config)
         if not snapshot.next:
             break
         subagent_state = None

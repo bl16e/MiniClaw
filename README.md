@@ -1,93 +1,164 @@
 # MiniClaw
 
-MiniClaw is a modular LangGraph-based agent project with tool calling, lightweight RAG, subagent orchestration, and human approval for sensitive operations.
+MiniClaw is a modular LangGraph-based agent with a full-stack Chat UI. It features async workflow orchestration, tool calling with human approval gates, lightweight RAG, subagent fan-out/fan-in, persistent checkpointing, and time-travel debugging.
+
+## Screenshots
+
+| Tool Execution & Markdown Rendering | Human-in-the-Loop Approval |
+|---|---|
+| ![chat-tool-table](docs/images/chat-tool-table.png) | ![chat-approval](docs/images/chat-approval.png) |
 
 ## Features
 
-- Async LangGraph workflow with classifier, RAG retrieval, and tool execution
+**Agent Core**
+- LangGraph async workflow with classifier routing (RAG / Subagent / Direct)
 - Parallel tool execution for multi-tool model responses
 - RAG over local documents and conversation history via Chroma
-- Optional Gmail sending tool with explicit approval gate
-- Subagent fan-out/fan-in flow for multi-item analysis
-- Environment-based configuration suitable for publishing
+- Subagent fan-out/fan-in for multi-item parallel analysis
+- Experience reflection and automatic history summarization
+
+**Full-Stack Chat UI**
+- FastAPI backend with SSE streaming for real-time token output
+- React + TypeScript frontend with Zustand state management
+- Markdown rendering with GFM tables, syntax-highlighted code blocks, and copy button
+- Tool call cards with live status indicators (pending / executing / completed / error)
+- Human-in-the-loop approval banner for sensitive tools (send_email, download_file, run_python_code)
+
+**Session Management**
+- Multi-session support with persistent SQLite checkpointing
+- Time Travel: replay from any checkpoint in the history panel
+- Branching: fork a conversation from any past state
+- History panel filtered by user interaction turns (not internal node steps)
+
+## Architecture
+
+```text
+Client (React + Vite)              Server (FastAPI)
++-----------------+   POST /chat   +------------------+
+|  SessionSidebar |--------------->|  SSE Stream      |---> graph.astream()
+|  ChatPanel      |<-- SSE events -|  Handler         |
+|  HistoryPanel   |                |                  |
+|  ApprovalBanner |-- POST /approve|  ApprovalManager |---> asyncio.Event
++-----------------+                +------------------+
+```
 
 ## Project Structure
 
 ```text
 .
-├── agent_core.py          # Graph assembly and routing
-├── config.py              # LLM configuration from environment variables
-├── main.py                # CLI entry point
-├── runner.py              # Streaming runner with approval flow
-├── nodes/                 # Graph nodes
-├── rag/                   # Chroma-backed retrieval helpers
-├── tools/                 # Tool definitions
-├── skills/                # Skill prompts and SOPs
-├── docs/                  # Supporting documentation
-└── chroma_db/             # Local vector store directory
++-- agent_core.py           # Graph assembly and routing
++-- api.py                  # FastAPI application and routes
++-- api_models.py           # Pydantic request/response models
++-- approval_manager.py     # Async approval state machine
++-- stream_handler.py       # SSE streaming wrapper for astream
++-- checkpointer.py         # AsyncSqliteSaver initialization
++-- session_manager.py      # Session CRUD and time-travel helpers
++-- runner.py               # CLI streaming runner with approval flow
++-- main.py                 # CLI entry point with slash commands
++-- config.py               # LLM configuration from environment
++-- state.py                # AgentState TypedDict definition
++-- utils.py                # Sensitive tool detection, reflection
++-- nodes/                  # Graph node implementations
++-- tools/                  # Tool definitions
++-- rag/                    # Chroma-backed retrieval helpers
++-- skills/                 # Skill prompts and SOPs
++-- web/                    # React frontend
+    +-- src/
+        +-- api/            # REST + SSE fetch client
+        +-- stores/         # Zustand global state
+        +-- hooks/          # useChat, useSessions
+        +-- components/     # Chat, Sidebar, History panels
+        +-- types/          # TypeScript type definitions
 ```
 
-## Requirements
+## Getting Started
 
-- Python 3.10+
-- A compatible OpenAI-style API endpoint
-- Optional Gmail OAuth credentials if you want `send_email`
+### Prerequisites
 
-## Installation
+- Python 3.9+
+- Node.js 18+
+- An OpenAI-compatible API endpoint
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/Ffr0nt/MiniClaw.git
+cd MiniClaw
+
+# Python dependencies
 pip install -r requirements.txt
+
+# Frontend dependencies
+cd web && npm install && cd ..
 ```
 
-Copy the example environment file and fill in your credentials:
+### Configuration
 
 ```bash
 cp .env.example .env
+# Edit .env and fill in your API key
 ```
 
-Required variables:
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | API key for OpenAI-compatible endpoint |
+| `OPENAI_API_BASE` | No | API base URL (default: DashScope) |
+| `MODEL_NAME` | No | Model name (default: qwen-max) |
+| `HTTP_PROXY` / `HTTPS_PROXY` | No | Network proxy |
+| `GMAIL_CREDENTIALS_FILE` | No | Gmail OAuth credentials path |
 
-- `OPENAI_API_KEY`
+### Running
 
-Optional variables:
+**Web UI (recommended)**
 
-- `OPENAI_API_BASE`
-- `MODEL_NAME`
-- `HTTP_PROXY`
-- `HTTPS_PROXY`
-- `GMAIL_CREDENTIALS_FILE`
-- `GMAIL_TOKEN_FILE`
+```bash
+# Terminal 1: Start the backend
+uvicorn api:app --reload --port 8000
 
-## Usage
+# Terminal 2: Start the frontend
+cd web && npm run dev
+```
 
-Run the CLI agent:
+Open http://localhost:5173 in your browser.
+
+**CLI mode**
 
 ```bash
 python main.py
 ```
 
-Example:
+CLI commands: `/sessions`, `/new`, `/switch`, `/history`, `/replay`, `/branch`, `/help`.
 
-```text
-You: Summarize the papers in the knowledge base
-```
+## API Endpoints
 
-## RAG Helpers
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/chat/{thread_id}` | Send message, returns SSE stream |
+| POST | `/api/chat/{thread_id}/approve` | Approve/reject sensitive tool |
+| GET | `/api/sessions` | List all sessions |
+| POST | `/api/sessions` | Create new session |
+| GET | `/api/sessions/{thread_id}/messages` | Full message history |
+| GET | `/api/sessions/{thread_id}/history` | Checkpoint history (by turn) |
+| POST | `/api/sessions/{thread_id}/replay` | Replay from checkpoint (SSE) |
+| POST | `/api/sessions/{thread_id}/branch` | Branch from checkpoint |
+| DELETE | `/api/sessions/{thread_id}` | Delete session |
 
-```python
-from rag import ingest_agent_knowledge, ingest_local_files
+## SSE Event Protocol
 
-ingest_local_files("./docs")
-ingest_agent_knowledge("Important internal context.")
-```
+| Event | Data | Description |
+|-------|------|-------------|
+| `node_start` | `{node, step}` | Graph node begins execution |
+| `message_complete` | `{content, role}` | Complete AI message |
+| `tool_call` | `{id, name, args}` | Tool invocation |
+| `tool_result` | `{id, name, result, status}` | Tool execution result |
+| `approval_required` | `{tools: [...]}` | Waiting for user approval |
+| `approval_resolved` | `{approved}` | Approval decision |
+| `complete` | `{thread_id}` | Conversation turn finished |
+| `error` | `{message}` | Error occurred |
 
 ## Safety Notes
 
-- Sensitive tools require approval in `runner.py`
-- Secrets and local auth files are ignored by `.gitignore`
-- Runtime Chroma index files are ignored; source documents can still be versioned explicitly
-
-## Known Notes
-
-- `search` and `navigate_to_url` use DuckDuckGo and plain HTTP requests, so results are best-effort
-- Gmail sending requires a local OAuth flow on first use
+- Sensitive tools (`send_email`, `download_file`, `run_python_code`, `filesystem` write) require explicit user approval
+- Secrets and auth files are excluded via `.gitignore`
+- Code execution tool uses a restricted built-in set (no `eval`, `exec`, `import`, `open`)

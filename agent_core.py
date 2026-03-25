@@ -2,7 +2,6 @@ import os
 from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
-from langgraph.checkpoint.memory import MemorySaver
 
 from config import llm, BASE_SYSTEM_PROMPT
 from tools.tools import tools
@@ -15,6 +14,9 @@ from nodes.subagent import subagent_coordinator_node, subagent_executor_node, su
 
 
 model = llm.bind_tools(tools)
+
+# 模块级变量，在 main 启动时通过 set_app() 设置
+app = None
 
 SKILLS_CONTENT = ""
 if os.path.exists("skills/skill.md"):
@@ -63,9 +65,9 @@ async def classifier_wrapper(state):
 async def subagent_executor_wrapper(state):
     return await subagent_executor_node(state, app)
 
-# Build graph
-def build_graph():
-    """Build and compile the agent graph"""
+
+def build_graph(checkpointer):
+    """Build and compile the agent graph with the given checkpointer."""
     graph = StateGraph(AgentState)
 
     # Add nodes
@@ -118,11 +120,13 @@ def build_graph():
     graph.add_edge("tools", "agent")
 
     # Compile with checkpointer and interrupts
-    memory = MemorySaver()
     return graph.compile(
-        checkpointer=memory,
+        checkpointer=checkpointer,
         interrupt_before=["tools", "parallel_tools"]
     )
 
 
-app = build_graph()
+def set_app(compiled_graph):
+    """设置模块级 app 变量，供 subagent_executor_wrapper 等使用。"""
+    global app
+    app = compiled_graph

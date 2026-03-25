@@ -4,6 +4,8 @@ langchain-community
 langchain-chroma
 langchain-huggingface
 langgraph
+langgraph-checkpoint-sqlite
+aiosqlite
 playwright
 pytz
 requests
@@ -16,3 +18,5 @@ python-dotenv
 google-auth
 google-auth-oauthlib
 google-api-python-client
+fastapi
+uvicorn[standard]

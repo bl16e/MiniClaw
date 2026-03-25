@@ -21,11 +21,19 @@ token.json
 tools/credentials.json
 tools/token.json
 
+# Checkpoint database
+checkpoints/
+
 # Vector database runtime state
 chroma_db/**/chroma.sqlite3
 chroma_db/**/*.bin
 chroma_db/**/*.pickle
 chroma_db/**/index_metadata.pickle
+
+# Frontend
+web/node_modules/
+web/dist/
+package-lock.json
 
 # OS/editor artifacts
 .DS_Store
