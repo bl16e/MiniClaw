@@ -1,5 +1,7 @@
 # MiniClaw
 
+[English](README.md) | [中文](README_zh.md)
+
 MiniClaw is a modular LangGraph-based agent with a full-stack Chat UI. It features async workflow orchestration, tool calling with human approval gates, lightweight RAG, subagent fan-out/fan-in, persistent checkpointing, and time-travel debugging.
 
 ## Screenshots
@@ -62,7 +64,11 @@ Client (React + Vite)              Server (FastAPI)
 +-- tools/                  # Tool definitions
 +-- rag/                    # Chroma-backed retrieval helpers
 +-- skills/                 # Skill prompts and SOPs
++-- Dockerfile              # Backend container image
++-- docker-compose.yml      # Full-stack orchestration
 +-- web/                    # React frontend
+    +-- Dockerfile          # Frontend multi-stage build
+    +-- nginx.conf          # Nginx reverse proxy config
     +-- src/
         +-- api/            # REST + SSE fetch client
         +-- stores/         # Zustand global state
@@ -82,8 +88,7 @@ Client (React + Vite)              Server (FastAPI)
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/Ffr0nt/MiniClaw.git
+git clone https://github.com/bl16e/MiniClaw.git
 cd MiniClaw
 
 # Python dependencies
@@ -107,6 +112,7 @@ cp .env.example .env
 | `MODEL_NAME` | No | Model name (default: qwen-max) |
 | `HTTP_PROXY` / `HTTPS_PROXY` | No | Network proxy |
 | `GMAIL_CREDENTIALS_FILE` | No | Gmail OAuth credentials path |
+| `CORS_ORIGINS` | No | Allowed CORS origins, comma-separated (default: `http://localhost:5173`) |
 
 ### Running
 
@@ -129,6 +135,33 @@ python main.py
 ```
 
 CLI commands: `/sessions`, `/new`, `/switch`, `/history`, `/replay`, `/branch`, `/help`.
+
+### Docker Deployment
+
+Make sure Docker and Docker Compose are installed, then:
+
+```bash
+cp .env.example .env
+# Edit .env with your API key
+
+docker compose up --build
+```
+
+Open http://localhost in your browser.
+
+To run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+To stop:
+
+```bash
+docker compose down
+```
+
+Persistent data (checkpoints and vector DB) is stored in Docker named volumes and survives container restarts.
 
 ## API Endpoints
 

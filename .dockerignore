@@ -1,0 +1,16 @@
+.git
+.gitignore
+.claude/
+.env
+__pycache__/
+*.pyc
+*.pyo
+checkpoints/
+chroma_db/
+credentials.json
+token.json
+web/node_modules/
+web/dist/
+docs/
+*.md
+!requirements.txt

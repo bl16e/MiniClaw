@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: .
+    env_file: .env
+    environment:
+      - CORS_ORIGINS=http://localhost
+    volumes:
+      - checkpoints:/app/checkpoints
+      - chroma_data:/app/chroma_db
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./web
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  checkpoints:
+  chroma_data:

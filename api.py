@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import os
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -47,9 +48,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MiniClaw Agent Chat", lifespan=lifespan)
 
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
